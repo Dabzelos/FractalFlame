@@ -1,21 +1,22 @@
 package domain
 
 import (
+	"fmt"
+	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/pkg"
 	"image"
 	"image/color"
 	"math"
 	"math/rand"
-
-	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/pkg"
 )
 
 type AffineTransformation struct {
-	a, b, c, d, e, f     float64
+	A, B, C, D, E, F     float64
 	TransformationColour color.RGBA
 }
 
 type ImageMatrix struct {
 	Resolution               *Resolution
+	StartingPoints           int
 	Pixels                   [][]Pixel
 	LinearTransformations    []AffineTransformation
 	NonLinearTransformations []func(x, y float64) (newX, newY float64)
@@ -23,8 +24,8 @@ type ImageMatrix struct {
 
 type Pixel struct {
 	X, Y    int
-	hitRate int
-	colour  color.RGBA
+	HitRate int
+	Colour  color.RGBA
 	normal  float64
 }
 
@@ -33,31 +34,31 @@ type Resolution struct {
 	Height int
 }
 
-const (
-	StartingPoints = 10000
-	amountOfAffine = 10
-)
+const amountOfAffine = 10
 
-func NewImageMatrix(width, height int) *ImageMatrix {
+func NewImageMatrix(width, startingPoints, height int) *ImageMatrix {
 	resolution := Resolution{
 		Width:  width,
 		Height: height,
 	}
 
+	NonlinearTransformations := make([]func(x, y float64) (newX, newY float64), 0)
+
 	matrix := make([][]Pixel, resolution.Height)
 	for y := 0; y < resolution.Height; y++ {
 		matrix[y] = make([]Pixel, resolution.Width)
 		for x := 0; x < resolution.Width; x++ {
-			matrix[y][x] = Pixel{X: x, Y: y, colour: color.RGBA{R: 0, G: 0, B: 0, A: 255}}
+			matrix[y][x] = Pixel{X: x, Y: y, Colour: color.RGBA{R: 0, G: 0, B: 0, A: 255}}
 		}
 	}
 
 	Affine := make([]AffineTransformation, amountOfAffine)
 
-	return &ImageMatrix{Pixels: matrix, Resolution: &resolution, LinearTransformations: Affine}
+	return &ImageMatrix{Pixels: matrix, Resolution: &resolution, LinearTransformations: Affine,
+		NonLinearTransformations: NonlinearTransformations, StartingPoints: startingPoints}
 }
 
-func (im *ImageMatrix) getNonLinearTransform(x, y float64) (newX, newY float64) {
+func (im *ImageMatrix) GetNonLinearTransform(x, y float64) (newX, newY float64) {
 	k, _ := pkg.GenerateRandInt(len(im.NonLinearTransformations))
 	return im.NonLinearTransformations[k](x, y)
 }
@@ -68,11 +69,12 @@ func (im *ImageMatrix) GenerateAffineTransformations() {
 	}
 }
 
-func (im *ImageMatrix) getAffineTransform() AffineTransformation {
+func (im *ImageMatrix) GetAffineTransform() AffineTransformation {
 	x, _ := pkg.GenerateRandInt(amountOfAffine)
 	return im.LinearTransformations[x]
 }
 
+/*
 func generateRandomColor() color.RGBA {
 	rCoef, _ := pkg.GenerateRandInt(256)
 	gCoef, _ := pkg.GenerateRandInt(256)
@@ -82,36 +84,81 @@ func generateRandomColor() color.RGBA {
 	b := uint8(bCoef)
 
 	return color.RGBA{R: r, G: g, B: b, A: 255}
+}*/
+
+func generateRandomColor() color.RGBA {
+	hue := rand.Float64() * 360
+
+	saturation := 1.0
+	value := 1.0
+
+	r, g, b := hsvToRgb(hue, saturation, value)
+
+	return color.RGBA{
+		R: uint8(r * 255),
+		G: uint8(g * 255),
+		B: uint8(b * 255),
+		A: 255,
+	}
+}
+
+func hsvToRgb(h, s, v float64) (float64, float64, float64) {
+	c := v * s
+	x := c * (1 - absMod(h/60, 2) - 1)
+	m := v - c
+
+	var r, g, b float64
+	switch {
+	case h >= 0 && h < 60:
+		r, g, b = c, x, 0
+	case h >= 60 && h < 120:
+		r, g, b = x, c, 0
+	case h >= 120 && h < 180:
+		r, g, b = 0, c, x
+	case h >= 180 && h < 240:
+		r, g, b = 0, x, c
+	case h >= 240 && h < 300:
+		r, g, b = x, 0, c
+	case h >= 300 && h < 360:
+		r, g, b = c, 0, x
+	}
+	return r + m, g + m, b + m
+}
+
+func absMod(x, y float64) float64 {
+	return x - float64(int(x/y))*y
 }
 
 func generateCoefficients() AffineTransformation {
 	for {
-		a := rand.Float64()*3 - 1.5
-		b := rand.Float64()*3 - 1.5
-		d := rand.Float64()*3 - 1.5
-		e := rand.Float64()*3 - 1.5
+		a := rand.Float64()*2 - 1
+		b := rand.Float64()*2 - 1
+		d := rand.Float64()*2 - 1
+		e := rand.Float64()*2 - 1
 
 		if math.Pow(a, 2)+math.Pow(d, 2) < 1 &&
 			math.Pow(b, 2)+math.Pow(e, 2) < 1 &&
 			math.Pow(a, 2)+math.Pow(b, 2)+math.Pow(d, 2)+math.Pow(e, 2) < 1+math.Pow(a*e-b*d, 2) {
+			fmt.Println("we are here")
+			fmt.Println(a, b, d, e)
 			c := rand.Float64()*2 - 1
 			f := rand.Float64()*2 - 1
 			colour := generateRandomColor()
 
 			return AffineTransformation{
-				a:                    a,
-				b:                    b,
-				c:                    c,
-				d:                    d,
-				e:                    e,
-				f:                    f,
+				A:                    a,
+				B:                    b,
+				C:                    c,
+				D:                    d,
+				E:                    e,
+				F:                    f,
 				TransformationColour: colour,
 			}
 		}
 	}
 }
 
-func averageColor(c1, c2 color.RGBA) color.RGBA {
+func AverageColor(c1, c2 color.RGBA) color.RGBA {
 	return color.RGBA{
 		R: ((c1.R) + (c2.R)) / 2,
 		G: ((c1.G) + (c2.G)) / 2,
@@ -120,47 +167,13 @@ func averageColor(c1, c2 color.RGBA) color.RGBA {
 	}
 }
 
-func (im *ImageMatrix) Render() {
-	xShapeFactor := float64(im.Resolution.Width) / float64(im.Resolution.Height)
-	yShapeFactor := 1.0
-
-	for i := 0; i < StartingPoints; i++ {
-		newX := (rand.Float64()*2 - 1) * xShapeFactor
-		newY := rand.Float64()*2 - 1
-
-		for step := -20; step < 1_000; step++ {
-			linearCoeffs := im.getAffineTransform()
-			x := linearCoeffs.a*newX + linearCoeffs.b*newY + linearCoeffs.c
-			y := linearCoeffs.d*newY + linearCoeffs.e*newX - linearCoeffs.f
-			trX, trY := im.getNonLinearTransform(x, y)
-
-			if step >= 0 { // && trX <= xShapeFactor && trX >= -xShapeFactor && trY <= yShapeFactor && trY >= -yShapeFactor
-				pixelX := im.Resolution.Width - int(((xShapeFactor-trX)/(2*xShapeFactor))*float64(im.Resolution.Width))
-				pixelY := im.Resolution.Height - int(((yShapeFactor-trY)/(2*yShapeFactor))*float64(im.Resolution.Height))
-
-				if pixelX >= 0 && pixelY >= 0 && pixelY < im.Resolution.Height && pixelX < im.Resolution.Width {
-					if im.Pixels[pixelY][pixelX].hitRate == 0 {
-						im.Pixels[pixelY][pixelX].colour = linearCoeffs.TransformationColour
-						im.Pixels[pixelY][pixelX].hitRate++
-
-						continue
-					}
-
-					im.Pixels[pixelY][pixelX].colour = averageColor(im.Pixels[pixelY][pixelX].colour, linearCoeffs.TransformationColour)
-					im.Pixels[pixelY][pixelX].hitRate++
-				}
-			}
-		}
-	}
-}
-
 func (im *ImageMatrix) Correction(gamma float64) {
 	var maxNormalizedHitRate float64
 
 	for row := range im.Pixels {
 		for col := range im.Pixels[row] {
-			if im.Pixels[row][col].hitRate != 0 {
-				im.Pixels[row][col].normal = math.Log10(float64(im.Pixels[row][col].hitRate))
+			if im.Pixels[row][col].HitRate != 0 {
+				im.Pixels[row][col].normal = math.Log10(float64(im.Pixels[row][col].HitRate))
 				if im.Pixels[row][col].normal > maxNormalizedHitRate {
 					maxNormalizedHitRate = im.Pixels[row][col].normal
 				}
@@ -173,9 +186,9 @@ func (im *ImageMatrix) Correction(gamma float64) {
 			adjusted := math.Pow(im.Pixels[row][col].normal, 1.0/gamma)
 
 			// im.Pixels[row][col].colour.A = uint8(float64(im.Pixels[row][col].colour.A) * adjusted)
-			im.Pixels[row][col].colour.R = uint8(float64(im.Pixels[row][col].colour.R) * adjusted)
-			im.Pixels[row][col].colour.G = uint8(float64(im.Pixels[row][col].colour.G) * adjusted)
-			im.Pixels[row][col].colour.B = uint8(float64(im.Pixels[row][col].colour.B) * adjusted)
+			im.Pixels[row][col].Colour.R = uint8(float64(im.Pixels[row][col].Colour.R) * adjusted)
+			im.Pixels[row][col].Colour.G = uint8(float64(im.Pixels[row][col].Colour.G) * adjusted)
+			im.Pixels[row][col].Colour.B = uint8(float64(im.Pixels[row][col].Colour.B) * adjusted)
 		}
 	}
 }
@@ -205,7 +218,7 @@ func (im *ImageMatrix) ToImage() image.Image {
 
 	for y, row := range im.Pixels {
 		for x := range row {
-			img.Set(x, y, row[x].colour)
+			img.Set(x, y, row[x].Colour)
 		}
 	}
 
