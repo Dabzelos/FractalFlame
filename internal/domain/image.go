@@ -2,11 +2,12 @@ package domain
 
 import (
 	"fmt"
-	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/pkg"
 	"image"
 	"image/color"
 	"math"
-	"math/rand"
+	"math/rand/v2"
+
+	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/pkg"
 )
 
 type AffineTransformation struct {
@@ -36,7 +37,7 @@ type Resolution struct {
 
 const amountOfAffine = 10
 
-func NewImageMatrix(width, startingPoints, height int) *ImageMatrix {
+func NewImageMatrix(width, height, startingPoints int) *ImageMatrix {
 	resolution := Resolution{
 		Width:  width,
 		Height: height,
@@ -74,7 +75,6 @@ func (im *ImageMatrix) GetAffineTransform() AffineTransformation {
 	return im.LinearTransformations[x]
 }
 
-/*
 func generateRandomColor() color.RGBA {
 	rCoef, _ := pkg.GenerateRandInt(256)
 	gCoef, _ := pkg.GenerateRandInt(256)
@@ -84,8 +84,9 @@ func generateRandomColor() color.RGBA {
 	b := uint8(bCoef)
 
 	return color.RGBA{R: r, G: g, B: b, A: 255}
-}*/
+}
 
+/*
 func generateRandomColor() color.RGBA {
 	hue := rand.Float64() * 360
 
@@ -122,12 +123,13 @@ func hsvToRgb(h, s, v float64) (float64, float64, float64) {
 	case h >= 300 && h < 360:
 		r, g, b = c, 0, x
 	}
+
 	return r + m, g + m, b + m
 }
 
 func absMod(x, y float64) float64 {
 	return x - float64(int(x/y))*y
-}
+}*/
 
 func generateCoefficients() AffineTransformation {
 	for {
@@ -185,7 +187,7 @@ func (im *ImageMatrix) Correction(gamma float64) {
 		for col := range im.Pixels[row] {
 			adjusted := math.Pow(im.Pixels[row][col].normal, 1.0/gamma)
 
-			// im.Pixels[row][col].colour.A = uint8(float64(im.Pixels[row][col].colour.A) * adjusted)
+			/* im.Pixels[row][col].colour.A = uint8(float64(im.Pixels[row][col].colour.A) * adjusted)*/
 			im.Pixels[row][col].Colour.R = uint8(float64(im.Pixels[row][col].Colour.R) * adjusted)
 			im.Pixels[row][col].Colour.G = uint8(float64(im.Pixels[row][col].Colour.G) * adjusted)
 			im.Pixels[row][col].Colour.B = uint8(float64(im.Pixels[row][col].Colour.B) * adjusted)
@@ -193,7 +195,7 @@ func (im *ImageMatrix) Correction(gamma float64) {
 	}
 }
 
-func (im *ImageMatrix) HorizontalSymmetry() {
+func (im *ImageMatrix) ReflectHorizontally() {
 	for y := 0; y < len(im.Pixels); y++ {
 		for x := 0; x < len(im.Pixels[y])/2; x++ {
 			// Отражаем пиксели справа налево
@@ -203,7 +205,7 @@ func (im *ImageMatrix) HorizontalSymmetry() {
 	}
 }
 
-func (im *ImageMatrix) VerticalSymmetry() {
+func (im *ImageMatrix) ReflectVertically() {
 	for y := 0; y < len(im.Pixels)/2; y++ {
 		mirrorY := len(im.Pixels) - 1 - y
 		for x := 0; x < len(im.Pixels[y]); x++ {

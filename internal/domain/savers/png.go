@@ -14,11 +14,11 @@ func (p *PngSaver) Save(img image.Image) error {
 		return err
 	}
 	defer file.Close()
+
 	err = png.Encode(file, img)
 	if err != nil {
 		return err
 	}
 
 	return nil
-
 }

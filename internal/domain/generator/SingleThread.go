@@ -1,8 +1,9 @@
 package generator
 
 import (
-	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain"
 	"math/rand/v2"
+
+	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain"
 )
 
 type SingleThreadGenerator struct{}
@@ -15,7 +16,7 @@ func (s *SingleThreadGenerator) Render(im *domain.ImageMatrix) {
 		newX := (rand.Float64()*2 - 1) * xShapeFactor
 		newY := rand.Float64()*2 - 1
 
-		for step := -20; step < 10000; step++ {
+		for step := -20; step < 100000; step++ {
 			linearCoeffs := im.GetAffineTransform()
 			x := linearCoeffs.A*newX + linearCoeffs.B*newY + linearCoeffs.C
 			y := linearCoeffs.D*newY + linearCoeffs.E*newX - linearCoeffs.F

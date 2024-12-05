@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain"
+	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain/generator"
 	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain/transformations"
 )
 
@@ -20,32 +21,30 @@ import (
 
 func main() {
 	start := time.Now()
-	ImageMatrix := domain.NewImageMatrix(1920, 1080)
+	ImageMatrix := domain.NewImageMatrix(1920, 1080, 10_000)
 
 	ImageMatrix.GenerateAffineTransformations()
 
-	ImageMatrix.NonLinearTransformations = append(ImageMatrix.NonLinearTransformations, transformations.Disc, transformations.Sinusoidal)
+	ImageMatrix.NonLinearTransformations = append(ImageMatrix.NonLinearTransformations, transformations.Disc, transformations.Polar)
 
-	ImageMatrix.Render()
-	/* ImageMatrix.HorizontalSymmetry()
-	ImageMatrix.VerticalSymmetry()*/
+	gn := &generator.SingleThreadGenerator{}
+	gn.Render(ImageMatrix)
+
 	ImageMatrix.Correction(2.2)
 	img := ImageMatrix.ToImage()
 
-	file, err := os.Create("spherical_transform.png")
+	file, err := os.Create("FractalFlame.png")
 	if err != nil {
 		panic(err)
 	}
-	defer file.Close() // Задаем размеры изображения
-
-	// Генерируем изображение
+	defer file.Close()
 
 	err = png.Encode(file, img)
 	if err != nil {
 		panic(err)
 	}
 
-	println("Изображение сохранено как spherical_transform.png")
+	println("Изображение сохранено как FractalFlame.png")
 
 	elapsed := time.Since(start) // Вычисляем разницу
 
@@ -54,3 +53,38 @@ func main() {
 
 	fmt.Printf("Время выполнения: %02d:%02d\n", minutes, seconds)
 }
+
+/*start := time.Now()
+ImageMatrix := domain.NewImageMatrix(1920, 1080)
+
+ImageMatrix.GenerateAffineTransformations()
+
+ImageMatrix.NonLinearTransformations = append(ImageMatrix.NonLinearTransformations, transformations.Disc, transformations.Sinusoidal)
+
+ImageMatrix.Render()
+/* ImageMatrix.ReflectHorizontally()
+ImageMatrix.ReflectVertically()*/ /*
+ImageMatrix.Correction(2.2)
+img := ImageMatrix.ToImage()
+
+file, err := os.Create("FractalFlame.png")
+if err != nil {
+panic(err)
+}
+defer file.Close() // Задаем размеры изображения
+
+// Генерируем изображение
+
+err = png.Encode(file, img)
+if err != nil {
+panic(err)
+}
+
+println("Изображение сохранено как FractalFlame.png")
+
+elapsed := time.Since(start) // Вычисляем разницу
+
+minutes := int(elapsed.Minutes())
+seconds := int(elapsed.Seconds()) % 60
+
+fmt.Printf("Время выполнения: %02d:%02d\n", minutes, seconds)*/

@@ -20,5 +20,6 @@ func (j *JpegSaver) Save(img image.Image) error {
 	if err := jpeg.Encode(file, img, options); err != nil {
 		return err
 	}
+
 	return nil
 }

@@ -1,14 +1,14 @@
 package application
 
 import (
-	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain/generator"
-	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain/savers"
 	"image"
 	"log/slog"
 	"os"
 	"strconv"
 
 	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain"
+	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain/generator"
+	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain/savers"
 	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain/transformations"
 	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/infrastructure/io"
 )
@@ -57,16 +57,13 @@ func (a *Application) SetUp() {
 	a.correction = gammaCor
 
 	xRes, yRes := a.validateResolution()
-
 	samples := a.validateNumberOfStartingPoints()
-
 	imageMatrix := domain.NewImageMatrix(xRes, yRes, samples)
 
 	a.imageMatrix = imageMatrix
 
 	a.GetSetOfLinearTransformations()
-
-	a.saver = &savers.JpegSaver{}
+	a.validateFormat()
 }
 
 func (a *Application) validateRenderer() {
@@ -75,8 +72,11 @@ func (a *Application) validateRenderer() {
 
 	userInput, _ := a.inputHandler.Read()
 	if userInput == "yes" || userInput == "y" {
+		a.FractalBuilder = &generator.MultiThread{}
 
+		return
 	}
+
 	a.FractalBuilder = &generator.SingleThreadGenerator{}
 }
 
@@ -85,6 +85,11 @@ func (a *Application) validateNumberOfStartingPoints() int {
 
 	for {
 		userInput, err := a.inputHandler.Read()
+		if err != nil {
+			a.outputHandler.Write("something went wrong please try again")
+
+			continue
+		}
 
 		samples, err := strconv.Atoi(userInput)
 		if err != nil {
@@ -106,6 +111,11 @@ func (a *Application) validateResolution() (width, height int) {
 
 	for {
 		userInput, err := a.inputHandler.Read()
+		if err != nil {
+			a.outputHandler.Write("something went wrong please try again")
+
+			continue
+		}
 
 		width, err = strconv.Atoi(userInput)
 		if err != nil {
@@ -125,8 +135,13 @@ func (a *Application) validateResolution() (width, height int) {
 
 	for {
 		userInput, err := a.inputHandler.Read()
-		height, err = strconv.Atoi(userInput)
+		if err != nil {
+			a.outputHandler.Write("something went wrong please try again")
 
+			continue
+		}
+
+		height, err = strconv.Atoi(userInput)
 		if err != nil {
 			a.outputHandler.Write("Please enter positive integer")
 			continue
@@ -164,13 +179,16 @@ func (a *Application) validateFormat() {
 		userInput, err := a.inputHandler.Read()
 		if err != nil {
 			a.outputHandler.Write("Something went wrong, please try again")
+
 			continue
 		}
+
 		if userInput == "JPEG" {
 			a.saver = &savers.JpegSaver{}
 
 			return
 		}
+
 		a.saver = &savers.PngSaver{}
 
 		return
@@ -221,11 +239,11 @@ func (a *Application) Start() {
 	a.imageMatrix.GenerateAffineTransformations()
 
 	if a.symmetry.xSymmetry {
-		a.imageMatrix.HorizontalSymmetry()
+		a.imageMatrix.ReflectHorizontally()
 	}
 
 	if a.symmetry.ySymmetry {
-		a.imageMatrix.VerticalSymmetry()
+		a.imageMatrix.ReflectVertically()
 	}
 
 	if a.correction {
