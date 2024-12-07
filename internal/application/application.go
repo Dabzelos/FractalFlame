@@ -1,16 +1,16 @@
 package application
 
 import (
-	"image"
-	"log/slog"
-	"os"
-	"strconv"
-
+	"encoding/json"
+	"fmt"
 	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain"
 	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain/generator"
 	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain/savers"
 	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain/transformations"
 	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/infrastructure/io"
+	"image"
+	"log/slog"
+	"os"
 )
 
 type FractalBuilder interface {
@@ -19,6 +19,20 @@ type FractalBuilder interface {
 
 type Saver interface {
 	Save(img image.Image) error
+}
+
+type Config struct {
+	Application struct {
+		Width              int    `json:"width"`
+		Height             int    `json:"height"`
+		StartingPoints     int    `json:"startingPoints"`
+		SingleThread       bool   `json:"singleThread"`
+		Gamma              bool   `json:"gamma"`
+		HorizontalSymmetry bool   `json:"horizontalSymmetry"`
+		VerticalSymmetry   bool   `json:"verticalSymmetry"`
+		Format             string `json:"format"`
+	} `json:"Application"`
+	LinearTransformations map[string]bool `json:"LinearTransformations"`
 }
 
 type Application struct {
@@ -41,194 +55,71 @@ func NewApp(logger *slog.Logger) *Application {
 	return &Application{logger: logger}
 }
 
-func (a *Application) SetUp() {
+func (a *Application) SetUp(filePath string) error {
+	config, err := a.readConfig(filePath)
+	if err != nil {
+		return fmt.Errorf("ошибка загрузки конфигурации: %w", err)
+	}
+
 	a.inputHandler = io.NewReader(os.Stdin)
 	a.outputHandler = io.NewWriter(os.Stdout, a.logger)
 
-	xSymmetry := a.validateFlags("Do you need horizontal symmetry?")
-	ySymmetry := a.validateFlags("Do you need vertical symmetry?")
+	a.imageMatrix = domain.NewImageMatrix(config.Application.Width, config.Application.Height, config.Application.StartingPoints)
+	a.symmetry = symmetryFlags{
+		xSymmetry: config.Application.HorizontalSymmetry,
+		ySymmetry: config.Application.VerticalSymmetry,
+	}
 
-	a.symmetry = symmetryFlags{xSymmetry, ySymmetry}
+	a.correction = config.Application.Gamma
+	a.saver = a.validateFormat(config.Application.Format)
 
-	a.validateRenderer()
-
-	gammaCor := a.validateFlags("Do you need gamma correction?")
-
-	a.correction = gammaCor
-
-	xRes, yRes := a.validateResolution()
-	samples := a.validateNumberOfStartingPoints()
-	imageMatrix := domain.NewImageMatrix(xRes, yRes, samples)
-
-	a.imageMatrix = imageMatrix
+	a.FractalBuilder = a.validateRenderer(config.Application.SingleThread)
 
 	a.GetSetOfLinearTransformations()
-	a.validateFormat()
+
+	return nil
 }
 
-func (a *Application) validateRenderer() {
-	a.outputHandler.Write("Do you want multi thread generation?")
-	a.outputHandler.Write("Please enter yes/y or any other input for no")
+func (a *Application) readConfig(filePath string) (*Config, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
 
-	userInput, _ := a.inputHandler.Read()
-	if userInput == "yes" || userInput == "y" {
-		a.FractalBuilder = &generator.MultiThread{}
+	var config Config
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&config); err != nil {
 
-		return
+		return nil, err
 	}
 
-	a.FractalBuilder = &generator.SingleThreadGenerator{}
+	return &config, nil
 }
 
-func (a *Application) validateNumberOfStartingPoints() int {
-	a.outputHandler.Write("Please enter number of starting points: ")
-
-	for {
-		userInput, err := a.inputHandler.Read()
-		if err != nil {
-			a.outputHandler.Write("something went wrong please try again")
-
-			continue
-		}
-
-		samples, err := strconv.Atoi(userInput)
-		if err != nil {
-			a.outputHandler.Write("Please enter positive integer")
-			continue
-		}
-
-		if samples <= 0 {
-			a.outputHandler.Write("Please enter positive integer")
-			continue
-		}
-
-		return samples
+func (a *Application) validateFormat(format string) Saver {
+	if format == "JPEG" {
+		return &savers.JpegSaver{}
 	}
+	return &savers.PngSaver{}
 }
 
-func (a *Application) validateResolution() (width, height int) {
-	a.outputHandler.Write("Please enter width")
-
-	for {
-		userInput, err := a.inputHandler.Read()
-		if err != nil {
-			a.outputHandler.Write("something went wrong please try again")
-
-			continue
-		}
-
-		width, err = strconv.Atoi(userInput)
-		if err != nil {
-			a.outputHandler.Write("Please enter positive integer")
-			continue
-		}
-
-		if width <= 0 {
-			a.outputHandler.Write("Please enter positive integer")
-			continue
-		}
-
-		break
+func (a *Application) validateRenderer(singleThread bool) FractalBuilder {
+	if singleThread {
+		return &generator.SingleThreadGenerator{}
 	}
-
-	a.outputHandler.Write("Please enter height")
-
-	for {
-		userInput, err := a.inputHandler.Read()
-		if err != nil {
-			a.outputHandler.Write("something went wrong please try again")
-
-			continue
-		}
-
-		height, err = strconv.Atoi(userInput)
-		if err != nil {
-			a.outputHandler.Write("Please enter positive integer")
-			continue
-		}
-
-		if height <= 0 {
-			a.outputHandler.Write("Please enter positive integer")
-
-			continue
-		}
-
-		break
-	}
-
-	return width, height
-}
-
-func (a *Application) validateFlags(message string) (flag bool) {
-	a.outputHandler.Write(message)
-	a.outputHandler.Write("Please enter yes/y or any other input for no")
-
-	userInput, _ := a.inputHandler.Read()
-	if userInput == "yes" || userInput == "y" {
-		return true
-	}
-
-	return false
-}
-
-func (a *Application) validateFormat() {
-	a.outputHandler.Write("Please choose format you want to save your picture" +
-		"1. PNG\n2. JPEG\n for any non valid input PNG will be set by default\n Please enter PNG or JPEG")
-
-	for {
-		userInput, err := a.inputHandler.Read()
-		if err != nil {
-			a.outputHandler.Write("Something went wrong, please try again")
-
-			continue
-		}
-
-		if userInput == "JPEG" {
-			a.saver = &savers.JpegSaver{}
-
-			return
-		}
-
-		a.saver = &savers.PngSaver{}
-
-		return
-	}
+	return &generator.MultiThread{}
 }
 
 func (a *Application) GetSetOfLinearTransformations() {
-	a.outputHandler.Write("We need to choose Non Linear transformations")
-
-	if a.validateFlags("Do you need sinusoidal transformation?") {
-		a.imageMatrix.NonLinearTransformations = append(a.imageMatrix.NonLinearTransformations, transformations.Sinusoidal)
-	}
-
-	if a.validateFlags("Do you need disc transformation?") {
-		a.imageMatrix.NonLinearTransformations = append(a.imageMatrix.NonLinearTransformations, transformations.Disc)
-	}
-
-	if a.validateFlags("Do you need handkerchief transformation?") {
-		a.imageMatrix.NonLinearTransformations = append(a.imageMatrix.NonLinearTransformations, transformations.Handkerchief)
-	}
-
-	if a.validateFlags("Do you need polar transformation?") {
-		a.imageMatrix.NonLinearTransformations = append(a.imageMatrix.NonLinearTransformations, transformations.Polar)
-	}
-
-	if a.validateFlags("Do you need horseshoe transformation?") {
-		a.imageMatrix.NonLinearTransformations = append(a.imageMatrix.NonLinearTransformations, transformations.Horseshoe)
-	}
-
-	if a.validateFlags("Do you need swirl transformation?") {
-		a.imageMatrix.NonLinearTransformations = append(a.imageMatrix.NonLinearTransformations, transformations.Swirl)
-	}
-
-	if a.validateFlags("Do you need spherical transformation?") {
-		a.imageMatrix.NonLinearTransformations = append(a.imageMatrix.NonLinearTransformations, transformations.Spherical)
-	}
+	a.imageMatrix.NonLinearTransformations = append(a.imageMatrix.NonLinearTransformations, transformations.EyeFish)
 }
 
 func (a *Application) Start() {
-	a.SetUp()
+	err := a.SetUp("config.json")
+	if err != nil {
+		return
+	}
 
 	if len(a.imageMatrix.NonLinearTransformations) == 0 {
 		a.outputHandler.Write("Unable to generate image without any non linear transformations")
@@ -237,6 +128,8 @@ func (a *Application) Start() {
 
 	a.outputHandler.Write("Please wait a bit")
 	a.imageMatrix.GenerateAffineTransformations()
+
+	a.FractalBuilder.Render(a.imageMatrix)
 
 	if a.symmetry.xSymmetry {
 		a.imageMatrix.ReflectHorizontally()
@@ -252,7 +145,7 @@ func (a *Application) Start() {
 
 	img := a.imageMatrix.ToImage()
 
-	err := a.saver.Save(img)
+	err = a.saver.Save(img)
 	if err != nil {
 		a.outputHandler.Write("Error occurred saving image restart please")
 		return

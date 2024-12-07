@@ -35,7 +35,7 @@ type Resolution struct {
 	Height int
 }
 
-const amountOfAffine = 10
+const amountOfAffine = 7
 
 func NewImageMatrix(width, height, startingPoints int) *ImageMatrix {
 	resolution := Resolution{
@@ -86,51 +86,6 @@ func generateRandomColor() color.RGBA {
 	return color.RGBA{R: r, G: g, B: b, A: 255}
 }
 
-/*
-func generateRandomColor() color.RGBA {
-	hue := rand.Float64() * 360
-
-	saturation := 1.0
-	value := 1.0
-
-	r, g, b := hsvToRgb(hue, saturation, value)
-
-	return color.RGBA{
-		R: uint8(r * 255),
-		G: uint8(g * 255),
-		B: uint8(b * 255),
-		A: 255,
-	}
-}
-
-func hsvToRgb(h, s, v float64) (float64, float64, float64) {
-	c := v * s
-	x := c * (1 - absMod(h/60, 2) - 1)
-	m := v - c
-
-	var r, g, b float64
-	switch {
-	case h >= 0 && h < 60:
-		r, g, b = c, x, 0
-	case h >= 60 && h < 120:
-		r, g, b = x, c, 0
-	case h >= 120 && h < 180:
-		r, g, b = 0, c, x
-	case h >= 180 && h < 240:
-		r, g, b = 0, x, c
-	case h >= 240 && h < 300:
-		r, g, b = x, 0, c
-	case h >= 300 && h < 360:
-		r, g, b = c, 0, x
-	}
-
-	return r + m, g + m, b + m
-}
-
-func absMod(x, y float64) float64 {
-	return x - float64(int(x/y))*y
-}*/
-
 func generateCoefficients() AffineTransformation {
 	for {
 		a := rand.Float64()*2 - 1
@@ -161,11 +116,17 @@ func generateCoefficients() AffineTransformation {
 }
 
 func AverageColor(c1, c2 color.RGBA) color.RGBA {
+	var r, g, b uint8
+	red, green, blue, _ := c2.RGBA()
+	redNew, greenNew, blueNew, _ := c2.RGBA()
+
+	r, g, b = uint8((red>>8+redNew>>8)/2), uint8((green>>8+greenNew>>8)/2), uint8((blue>>8+blueNew>>8)/2)
+
 	return color.RGBA{
-		R: ((c1.R) + (c2.R)) / 2,
-		G: ((c1.G) + (c2.G)) / 2,
-		B: ((c1.B) + (c2.B)) / 2,
-		A: ((c1.A) + (c2.A)) / 2,
+		R: r,
+		G: g,
+		B: b,
+		A: 255,
 	}
 }
 
@@ -187,10 +148,10 @@ func (im *ImageMatrix) Correction(gamma float64) {
 		for col := range im.Pixels[row] {
 			adjusted := math.Pow(im.Pixels[row][col].normal, 1.0/gamma)
 
-			/* im.Pixels[row][col].colour.A = uint8(float64(im.Pixels[row][col].colour.A) * adjusted)*/
 			im.Pixels[row][col].Colour.R = uint8(float64(im.Pixels[row][col].Colour.R) * adjusted)
 			im.Pixels[row][col].Colour.G = uint8(float64(im.Pixels[row][col].Colour.G) * adjusted)
 			im.Pixels[row][col].Colour.B = uint8(float64(im.Pixels[row][col].Colour.B) * adjusted)
+
 		}
 	}
 }
@@ -198,7 +159,6 @@ func (im *ImageMatrix) Correction(gamma float64) {
 func (im *ImageMatrix) ReflectHorizontally() {
 	for y := 0; y < len(im.Pixels); y++ {
 		for x := 0; x < len(im.Pixels[y])/2; x++ {
-			// Отражаем пиксели справа налево
 			mirrorX := len(im.Pixels[y]) - 1 - x
 			im.Pixels[y][mirrorX] = im.Pixels[y][x]
 		}
@@ -209,7 +169,6 @@ func (im *ImageMatrix) ReflectVertically() {
 	for y := 0; y < len(im.Pixels)/2; y++ {
 		mirrorY := len(im.Pixels) - 1 - y
 		for x := 0; x < len(im.Pixels[y]); x++ {
-			// Отражаем пиксели снизу вверх
 			im.Pixels[mirrorY][x] = im.Pixels[y][x]
 		}
 	}
