@@ -1,0 +1,25 @@
+{
+  "Application": {
+    "width": 1920,
+    "height": 1080,
+    "startingPoints": 100,
+    "singleThread": true,
+    "iterations": 100000,
+    "gamma": true,
+    "horizontalSymmetry": false,
+    "verticalSymmetry": false,
+    "format": "PNG"
+  },
+  "LinearTransformations": {
+    "Spherical": true,
+    "Sinusoidal": true,
+    "Handkerchief": true,
+    "Swirl": true,
+    "Horseshoe": true,
+    "Polar": true,
+    "Disc": true,
+    "Heart": true,
+    "Linear": true,
+    "EyeFish": true
+  }
+}

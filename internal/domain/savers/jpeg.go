@@ -9,6 +9,7 @@ import (
 type JpegSaver struct {
 }
 
+// Save - позволяет сохранить изображение в формате jpg.
 func (j *JpegSaver) Save(img image.Image) error {
 	file, err := os.Create("FractalFlame.jpg")
 	if err != nil {

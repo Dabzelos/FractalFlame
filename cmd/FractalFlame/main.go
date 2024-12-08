@@ -1,90 +1,15 @@
 package main
 
 import (
-	"fmt"
-	"image/png"
-	"os"
-	"time"
-
-	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain"
-	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain/generator"
-	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain/transformations"
+	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/application"
+	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/pkg/logger"
 )
 
-/*
+func main() {
 	fileLogger := logger.NewFileLogger("logs.txt")
 
 	defer fileLogger.Close()
 
 	app := application.NewApp(fileLogger.Logger())
-	app.Start()*/
-
-func main() {
-	start := time.Now()
-	ImageMatrix := domain.NewImageMatrix(1920, 1080, 10_000)
-
-	ImageMatrix.GenerateAffineTransformations()
-
-	ImageMatrix.NonLinearTransformations = append(ImageMatrix.NonLinearTransformations, transformations.Disc, transformations.Polar)
-
-	gn := &generator.SingleThreadGenerator{}
-	gn.Render(ImageMatrix)
-
-	ImageMatrix.Correction(2.2)
-	img := ImageMatrix.ToImage()
-
-	file, err := os.Create("FractalFlame.png")
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
-
-	err = png.Encode(file, img)
-	if err != nil {
-		panic(err)
-	}
-
-	println("Изображение сохранено как FractalFlame.png")
-
-	elapsed := time.Since(start) // Вычисляем разницу
-
-	minutes := int(elapsed.Minutes())
-	seconds := int(elapsed.Seconds()) % 60
-
-	fmt.Printf("Время выполнения: %02d:%02d\n", minutes, seconds)
+	app.Start()
 }
-
-/*start := time.Now()
-ImageMatrix := domain.NewImageMatrix(1920, 1080)
-
-ImageMatrix.GenerateAffineTransformations()
-
-ImageMatrix.NonLinearTransformations = append(ImageMatrix.NonLinearTransformations, transformations.Disc, transformations.Sinusoidal)
-
-ImageMatrix.Render()
-/* ImageMatrix.ReflectHorizontally()
-ImageMatrix.ReflectVertically()*/ /*
-ImageMatrix.Correction(2.2)
-img := ImageMatrix.ToImage()
-
-file, err := os.Create("FractalFlame.png")
-if err != nil {
-panic(err)
-}
-defer file.Close() // Задаем размеры изображения
-
-// Генерируем изображение
-
-err = png.Encode(file, img)
-if err != nil {
-panic(err)
-}
-
-println("Изображение сохранено как FractalFlame.png")
-
-elapsed := time.Since(start) // Вычисляем разницу
-
-minutes := int(elapsed.Minutes())
-seconds := int(elapsed.Seconds()) % 60
-
-fmt.Printf("Время выполнения: %02d:%02d\n", minutes, seconds)*/
