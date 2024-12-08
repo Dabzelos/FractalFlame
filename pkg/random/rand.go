@@ -20,6 +20,7 @@ func GenerateRandInt(maxNum int) (int, error) {
 	return int(randomIndex.Int64()), nil
 }
 
+// GenerateRandFloat64 позволяет получить значение в формате типа float64, из диапазона [-1;1].
 func GenerateRandFloat64() (float64, error) {
 	n, err := rand.Int(rand.Reader, big.NewInt(1000000000))
 
@@ -35,9 +36,9 @@ func GenerateRandomColor() color.RGBA {
 	rCoef, _ := GenerateRandInt(256)
 	gCoef, _ := GenerateRandInt(256)
 	bCoef, _ := GenerateRandInt(256)
-	r := uint8(rCoef)
-	g := uint8(gCoef)
-	b := uint8(bCoef)
+	r := byte(rCoef)
+	g := byte(gCoef)
+	b := byte(bCoef)
 
 	return color.RGBA{R: r, G: g, B: b, A: 255}
 }

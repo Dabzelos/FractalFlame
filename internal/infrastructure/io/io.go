@@ -25,7 +25,3 @@ func (o *Output) Write(messages ...interface{}) {
 		o.logger.Error("output error occurred", errors.ErrOutPut{}.Error(), err)
 	}
 }
-
-type Input struct {
-	r io.Reader
-}

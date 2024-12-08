@@ -114,7 +114,7 @@ func (im *ImageMatrix) averageColor(c1, c2 color.RGBA) color.RGBA {
 	red, green, blue, _ := c1.RGBA()
 	redNew, greenNew, blueNew, _ := c2.RGBA()
 
-	r, g, b = uint8((red>>8+redNew>>8)/2), uint8((green>>8+greenNew>>8)/2), uint8((blue>>8+blueNew>>8)/2)
+	r, g, b = byte((red>>8+redNew>>8)/2), byte((green>>8+greenNew>>8)/2), byte((blue>>8+blueNew>>8)/2)
 
 	return color.RGBA{
 		R: r,
