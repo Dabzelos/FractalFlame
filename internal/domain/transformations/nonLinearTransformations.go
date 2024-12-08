@@ -67,7 +67,6 @@ func Disc(x, y float64) (newX, newY float64) {
 }
 
 func Heart(x, y float64) (newX, newY float64) {
-
 	r := math.Sqrt(x*x + y*y)
 	theta := math.Atan2(y, x)
 	newX = r * math.Sin(theta*r)
@@ -84,5 +83,6 @@ func EyeFish(x, y float64) (newX, newY float64) {
 	r := math.Sqrt(x*x + y*y)
 	newX = 2.0 / (r + 1) * x
 	newY = 2.0 / (r + 1) * y
+
 	return
 }

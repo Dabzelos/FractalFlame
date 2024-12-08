@@ -1,7 +1,6 @@
 package io
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"log/slog"
@@ -29,19 +28,4 @@ func (o *Output) Write(messages ...interface{}) {
 
 type Input struct {
 	r io.Reader
-}
-
-func NewReader(r io.Reader) *Input {
-	return &Input{r: r}
-}
-
-func (i *Input) Read() (string, error) {
-	reader := bufio.NewReader(i.r)
-
-	input, err := reader.ReadString('\n')
-	if err != nil {
-		return "", err
-	}
-
-	return input[:len(input)-1], nil
 }

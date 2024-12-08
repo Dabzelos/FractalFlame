@@ -4,6 +4,7 @@
     "height": 1080,
     "startingPoints": 100,
     "singleThread": true,
+    "iterations": 100000,
     "gamma": true,
     "horizontalSymmetry": false,
     "verticalSymmetry": false,

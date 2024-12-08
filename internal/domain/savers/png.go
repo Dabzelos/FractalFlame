@@ -8,6 +8,7 @@ import (
 
 type PngSaver struct{}
 
+// Save позволяет сохранить изображение в формате PNG.
 func (p *PngSaver) Save(img image.Image) error {
 	file, err := os.Create("FractalFlame.png")
 	if err != nil {
