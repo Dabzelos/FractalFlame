@@ -4,6 +4,8 @@ import (
 	"image"
 	"image/color"
 	"math"
+	"math/rand/v2"
+	"sync"
 
 	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/pkg/random"
 )
@@ -13,13 +15,16 @@ type AffineTransformation struct {
 	TransformationColour color.RGBA
 }
 
+type TransformFunc func(x, y float64) (newX, newY float64)
+
 type ImageMatrix struct {
 	Resolution               *Resolution
+	cords                    CoordinatesRange
 	StartingPoints           int
 	Iterations               int
 	Pixels                   [][]Pixel
 	LinearTransformations    []AffineTransformation
-	NonLinearTransformations []func(x, y float64) (newX, newY float64)
+	NonLinearTransformations []TransformFunc
 }
 
 type Pixel struct {
@@ -27,11 +32,16 @@ type Pixel struct {
 	HitRate int
 	Colour  color.RGBA
 	normal  float64
+	mutex   sync.Mutex
 }
 
 type Resolution struct {
 	Width  int
 	Height int
+}
+
+type CoordinatesRange struct {
+	xMin, yMin, xMax, yMax float64
 }
 
 const amountOfAffine = 7
@@ -42,7 +52,7 @@ func NewImageMatrix(width, height, startingPoints, iterations int) *ImageMatrix 
 		Height: height,
 	}
 
-	NonlinearTransformations := make([]func(x, y float64) (newX, newY float64), 0)
+	NonlinearTransformations := make([]TransformFunc, 0)
 
 	matrix := make([][]Pixel, resolution.Height)
 	for y := 0; y < resolution.Height; y++ {
@@ -52,15 +62,32 @@ func NewImageMatrix(width, height, startingPoints, iterations int) *ImageMatrix 
 		}
 	}
 
+	var xMin, yMin, xMax, yMax float64
+
+	if width > height {
+		k := float64(width) / float64(height)
+		xMin, yMin, xMax, yMax = -k, -1, k, 1
+	} else {
+		k := float64(height) / float64(width)
+		xMin, yMin, xMax, yMax = -1, -k, 1, k
+	}
+
+	cords := CoordinatesRange{
+		xMin: xMin,
+		yMin: yMin,
+		xMax: xMax,
+		yMax: yMax,
+	}
+
 	Affine := make([]AffineTransformation, amountOfAffine)
 
 	return &ImageMatrix{Pixels: matrix, Resolution: &resolution, LinearTransformations: Affine,
-		NonLinearTransformations: NonlinearTransformations, StartingPoints: startingPoints, Iterations: iterations}
+		NonLinearTransformations: NonlinearTransformations, StartingPoints: startingPoints, Iterations: iterations, cords: cords}
 }
 
 // GetNonLinearTransform - возвращает применение к координатам случайной функции нелинейного преобразования.
 func (im *ImageMatrix) GetNonLinearTransform(x, y float64) (newX, newY float64) {
-	k, _ := random.GenerateRandInt(len(im.NonLinearTransformations))
+	k := rand.IntN(len(im.NonLinearTransformations)) //nolint
 	return im.NonLinearTransformations[k](x, y)
 }
 
@@ -75,23 +102,23 @@ func (im *ImageMatrix) GenerateAffineTransformations() {
 // GetAffineTransform - позволяет получить одно случайное
 // из 7(определенно константой) линейных(аффинных) преобразований.
 func (im *ImageMatrix) GetAffineTransform() AffineTransformation {
-	x, _ := random.GenerateRandInt(amountOfAffine)
+	x := rand.IntN(amountOfAffine) //nolint
 	return im.LinearTransformations[x]
 }
 
 // generateCoefficients -позволяет сгенерировать коэффициенты и цвет для линейного преобразования.
 func (im *ImageMatrix) generateCoefficients() AffineTransformation {
 	for {
-		a, _ := random.GenerateRandFloat64()
-		b, _ := random.GenerateRandFloat64()
-		d, _ := random.GenerateRandFloat64()
-		e, _ := random.GenerateRandFloat64()
+		a := random.GenerateRandFloat64()
+		b := random.GenerateRandFloat64()
+		d := random.GenerateRandFloat64()
+		e := random.GenerateRandFloat64()
 
 		if math.Pow(a, 2)+math.Pow(d, 2) < 1 &&
 			math.Pow(b, 2)+math.Pow(e, 2) < 1 &&
 			math.Pow(a, 2)+math.Pow(b, 2)+math.Pow(d, 2)+math.Pow(e, 2) < 1+math.Pow(a*e-b*d, 2) {
-			c, _ := random.GenerateRandFloat64()
-			f, _ := random.GenerateRandFloat64()
+			c := random.GenerateRandFloat64()
+			f := random.GenerateRandFloat64()
 			colour := random.GenerateRandomColor()
 
 			return AffineTransformation{
@@ -114,7 +141,7 @@ func (im *ImageMatrix) averageColor(c1, c2 color.RGBA) color.RGBA {
 	red, green, blue, _ := c1.RGBA()
 	redNew, greenNew, blueNew, _ := c2.RGBA()
 
-	r, g, b = byte((red>>8+redNew>>8)/2), byte((green>>8+greenNew>>8)/2), byte((blue>>8+blueNew>>8)/2)
+	r, g, b = byte((red>>8+redNew>>8)>>1), byte((green>>8+greenNew>>8)>>1), byte((blue>>8+blueNew>>8)>>1)
 
 	return color.RGBA{
 		R: r,
@@ -155,7 +182,12 @@ func (im *ImageMatrix) ReflectHorizontally() {
 	for y := 0; y < len(im.Pixels); y++ {
 		for x := 0; x < len(im.Pixels[y])/2; x++ {
 			mirrorX := len(im.Pixels[y]) - 1 - x
-			im.Pixels[y][mirrorX] = im.Pixels[y][x]
+			im.Pixels[y][mirrorX] = Pixel{
+				Colour:  im.Pixels[y][x].Colour,
+				X:       x,
+				Y:       y,
+				HitRate: im.Pixels[y][x].HitRate,
+			}
 		}
 	}
 }
@@ -184,6 +216,9 @@ func (im *ImageMatrix) ConvertToImage() image.Image {
 
 // UpdatePixel - отвечает за обработку одного пикселя в рамках работы алгоритма.
 func (im *ImageMatrix) UpdatePixel(pixelY, pixelX int, linearCoeffs AffineTransformation) {
+	im.Pixels[pixelY][pixelX].mutex.Lock()
+	defer im.Pixels[pixelY][pixelX].mutex.Unlock()
+
 	if im.Pixels[pixelY][pixelX].HitRate == 0 {
 		im.Pixels[pixelY][pixelX].Colour = linearCoeffs.TransformationColour
 		im.Pixels[pixelY][pixelX].HitRate++
@@ -196,20 +231,20 @@ func (im *ImageMatrix) UpdatePixel(pixelY, pixelX int, linearCoeffs AffineTransf
 }
 
 // GenerateStartingCoordinates - позволяет получить координаты стартовых точек для работы алгоритма.
-func (im *ImageMatrix) GenerateStartingCoordinates(xMax, xMin, yMax, yMin float64) (newX, newY float64) {
-	newX, _ = random.GenerateRandFloat64()
-	newY, _ = random.GenerateRandFloat64()
+func (im *ImageMatrix) GenerateStartingCoordinates() (newX, newY float64) {
+	newX = random.GenerateRandFloat64() //nolint
+	newY = random.GenerateRandFloat64() //nolint
 
-	newX = newX*(xMax-xMin) + xMin
-	newY = newY*(yMax-yMin) + yMin
+	newX = newX*(im.cords.xMax-im.cords.xMin) + im.cords.xMin
+	newY = newY*(im.cords.yMax-im.cords.yMin) + im.cords.yMin
 
 	return newX, newY
 }
 
 // ProcessStartingPoint - функция реализующая логику обработки каждой стартовой точки, вынесено в отдельную во избежание
 // дублирования кода.
-func (im *ImageMatrix) ProcessStartingPoint(xMin, yMin, xMax, yMax float64) {
-	newX, newY := im.GenerateStartingCoordinates(xMax, xMin, yMax, yMin)
+func (im *ImageMatrix) ProcessStartingPoint() {
+	newX, newY := im.GenerateStartingCoordinates()
 
 	for step := -20; step < im.Iterations; step++ {
 		linearCoeffs := im.GetAffineTransform() // Получаем линейные коэффициенты трансформации
@@ -217,8 +252,10 @@ func (im *ImageMatrix) ProcessStartingPoint(xMin, yMin, xMax, yMax float64) {
 		y := linearCoeffs.D*newY + linearCoeffs.E*newX - linearCoeffs.F
 
 		if step >= 0 {
-			pixelX := im.Resolution.Width - int(math.Trunc(((xMax-x)/(xMax-xMin))*float64(im.Resolution.Width)))
-			pixelY := im.Resolution.Height - int(math.Trunc(((yMax-y)/(yMax-yMin))*float64(im.Resolution.Height)))
+			pixelX := im.Resolution.Width - int(math.Trunc(((im.cords.xMax-x)/(im.cords.xMax-im.cords.xMin))*
+				float64(im.Resolution.Width)))
+			pixelY := im.Resolution.Height - int(math.Trunc(((im.cords.yMax-y)/(im.cords.yMax-im.cords.yMin))*
+				float64(im.Resolution.Height)))
 
 			if pixelX >= 0 && pixelY >= 0 && pixelY < im.Resolution.Height && pixelX < im.Resolution.Width {
 				im.UpdatePixel(pixelY, pixelX, linearCoeffs)

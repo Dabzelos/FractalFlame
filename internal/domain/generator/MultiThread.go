@@ -8,34 +8,27 @@ import (
 )
 
 type MultiThreadGenerator struct {
+	NumWorkers int
 }
 
 // Render функция, которая обеспечивает многопоточную генерацию фрактального пламени.
 func (m *MultiThreadGenerator) Render(im *domain.ImageMatrix) {
-	var xMin, yMin, xMax, yMax float64
-
-	if im.Resolution.Width > im.Resolution.Height {
-		k := float64(im.Resolution.Width) / float64(im.Resolution.Height)
-		xMin, yMin, xMax, yMax = -k, -1, k, 1
-	} else {
-		k := float64(im.Resolution.Height) / float64(im.Resolution.Width)
-		xMin, yMin, xMax, yMax = -1, -k, 1, k
-	}
+	var wg sync.WaitGroup
 
 	jobs := make(chan int, im.StartingPoints)
 
-	var wg sync.WaitGroup
+	if m.NumWorkers == 0 {
+		m.NumWorkers = runtime.NumCPU()
+	}
 
-	numWorkers := runtime.NumCPU()
-
-	for w := 0; w < numWorkers; w++ {
+	for w := 0; w < m.NumWorkers; w++ {
 		wg.Add(1)
 
 		go func() {
 			defer wg.Done()
 
 			for range jobs {
-				im.ProcessStartingPoint(xMin, yMin, xMax, yMax)
+				im.ProcessStartingPoint()
 			}
 		}()
 	}

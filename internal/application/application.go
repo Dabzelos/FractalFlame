@@ -1,13 +1,11 @@
 package application
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"image"
 	"log/slog"
 	"os"
 
+	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/configuration"
 	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain"
 	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain/errors"
 	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain/generator"
@@ -16,50 +14,27 @@ import (
 	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/infrastructure/io"
 )
 
-type FractalBuilder interface {
+type fractalBuilder interface {
 	Render(im *domain.ImageMatrix)
 }
 
-type Saver interface {
+type saver interface {
 	Save(img image.Image) error
 }
 
-type LinearTransformationsConfig struct {
-	Spherical    bool `json:"Spherical"`
-	Sinusoidal   bool `json:"Sinusoidal"`
-	Handkerchief bool `json:"Handkerchief"`
-	Swirl        bool `json:"Swirl"`
-	Horseshoe    bool `json:"Horseshoe"`
-	Polar        bool `json:"Polar"`
-	Disc         bool `json:"Disc"`
-	Heart        bool `json:"Heart"`
-	Linear       bool `json:"Linear"`
-	EyeFish      bool `json:"EyeFish"`
-}
-
-type Config struct {
-	Application struct {
-		Width              int    `json:"width"`
-		Height             int    `json:"height"`
-		StartingPoints     int    `json:"startingPoints"`
-		Iterations         int    `json:"iterations"`
-		SingleThread       bool   `json:"singleThread"`
-		Gamma              bool   `json:"gamma"`
-		HorizontalSymmetry bool   `json:"horizontalSymmetry"`
-		VerticalSymmetry   bool   `json:"verticalSymmetry"`
-		Format             string `json:"format"`
-	} `json:"Application"`
-	ListOfTransformations LinearTransformationsConfig `json:"LinearTransformations"`
+type outputHandler interface {
+	Write(messages ...interface{})
 }
 
 type Application struct {
-	imageMatrix    *domain.ImageMatrix
-	symmetry       symmetryFlags
-	correction     bool
-	outputHandler  *io.Output
-	logger         *slog.Logger
-	saver          Saver
-	FractalBuilder FractalBuilder
+	imageMatrix     *domain.ImageMatrix
+	symmetry        symmetryFlags
+	correction      bool
+	correctionCoeff float64
+	outputHandler   outputHandler
+	logger          *slog.Logger
+	saver           saver
+	fractalBuilder  fractalBuilder
 }
 
 type symmetryFlags struct {
@@ -67,14 +42,14 @@ type symmetryFlags struct {
 	ySymmetry bool
 }
 
-func NewApp(logger *slog.Logger) *Application {
-	return &Application{logger: logger}
+func NewApp(logger *slog.Logger, handler outputHandler) *Application {
+	return &Application{logger: logger, outputHandler: handler}
 }
 
-func (a *Application) SetUp(filePath string) error {
-	config, err := a.readConfig(filePath)
+func (a *Application) setUp(filePath *string) error {
+	config, err := configuration.Read(*filePath)
 	if err != nil {
-		return fmt.Errorf("ошибка загрузки конфигурации: %w", err)
+		return errors.ErrReadingConfig{Err: err}
 	}
 
 	a.outputHandler = io.NewWriter(os.Stdout, a.logger)
@@ -87,55 +62,36 @@ func (a *Application) SetUp(filePath string) error {
 	}
 
 	a.correction = config.Application.Gamma
-	a.saver = a.validateFormat(config.Application.Format)
-
-	a.FractalBuilder = a.validateRenderer(config.Application.SingleThread)
-
-	a.GetSetOfLinearTransformations(config.ListOfTransformations)
+	a.correctionCoeff = config.Application.GammaCoeff
+	a.setSaver(config.Application.Format)
+	a.setRenderer(config.Application.SingleThread, config.Application.NumWorkers)
+	a.validateSetOfLinearTransformations(config.ListOfTransformations)
 
 	return nil
 }
 
-func (a *Application) readConfig(filePath string) (*Config, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	var config Config
-
-	decoder := json.NewDecoder(file)
-
-	if err := decoder.Decode(&config); err != nil {
-		return nil, err
-	}
-
-	if config.Application.Height == 0 || config.Application.Width == 0 || config.Application.StartingPoints == 0 {
-		return nil, errors.ErrZeroSizeMatrix{}
-	}
-
-	return &config, nil
-}
-
-func (a *Application) validateFormat(format string) Saver {
+func (a *Application) setSaver(format string) {
 	if format == "JPEG" {
-		return &savers.JpegSaver{}
+		a.saver = &savers.JpegSaver{}
+
+		return
 	}
 
-	return &savers.PngSaver{}
+	a.saver = &savers.PngSaver{}
 }
 
-func (a *Application) validateRenderer(singleThread bool) FractalBuilder {
+func (a *Application) setRenderer(singleThread bool, workers int) {
 	if singleThread {
-		return &generator.SingleThreadGenerator{}
+		a.fractalBuilder = &generator.SingleThreadGenerator{}
+
+		return
 	}
 
-	return &generator.MultiThreadGenerator{}
+	a.fractalBuilder = &generator.MultiThreadGenerator{NumWorkers: workers}
 }
 
-func (a *Application) GetSetOfLinearTransformations(trConfig LinearTransformationsConfig) {
-	var functions []func(float64, float64) (float64, float64)
+func (a *Application) validateSetOfLinearTransformations(trConfig configuration.LinearTransformationsConfig) {
+	var functions []domain.TransformFunc
 
 	if trConfig.Spherical {
 		functions = append(functions, transformations.Spherical)
@@ -180,21 +136,19 @@ func (a *Application) GetSetOfLinearTransformations(trConfig LinearTransformatio
 	a.imageMatrix.NonLinearTransformations = functions
 }
 
-func (a *Application) Start() {
-	if err := a.SetUp("config.json"); err != nil {
-		a.logger.Error("Error occurred reading from config file")
-		return
+func (a *Application) Start(source *string) error {
+	if err := a.setUp(source); err != nil {
+		return errors.ErrReadingConfig{Err: err}
 	}
 
 	if len(a.imageMatrix.NonLinearTransformations) == 0 {
 		a.outputHandler.Write("Unable to generate image without any non linear transformations")
-		return
+		return errors.ErrZeroSizeMatrix{}
 	}
 
-	a.outputHandler.Write("Please wait a bit")
 	a.imageMatrix.GenerateAffineTransformations()
 
-	a.FractalBuilder.Render(a.imageMatrix)
+	a.fractalBuilder.Render(a.imageMatrix)
 
 	if a.symmetry.xSymmetry {
 		a.imageMatrix.ReflectHorizontally()
@@ -205,17 +159,18 @@ func (a *Application) Start() {
 	}
 
 	if a.correction {
-		a.imageMatrix.Correction(2.2)
+		a.imageMatrix.Correction(a.correctionCoeff)
 	}
 
 	img := a.imageMatrix.ConvertToImage()
 
 	if err := a.saver.Save(img); err != nil {
-		a.logger.Error("error occurred saving image", "error", err)
 		a.outputHandler.Write("Error occurred saving image restart please")
 
-		return
+		return errors.ErrSavingImage{Err: err}
 	}
 
 	a.outputHandler.Write("Изображение сохранено как FractalFlame")
+
+	return nil
 }
