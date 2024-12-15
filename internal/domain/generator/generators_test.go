@@ -18,11 +18,6 @@ func BenchmarkSingleThreadGenerator_Render(b *testing.B) {
 		Iterations     int
 	}{
 		{width: 1980, height: 1080, StartingPoints: 100, Iterations: 100000},
-		{width: 1980, height: 1080, StartingPoints: 150, Iterations: 100000},
-		{width: 1980, height: 1080, StartingPoints: 200, Iterations: 100000},
-		{width: 2560, height: 1440, StartingPoints: 100, Iterations: 100000},
-		{width: 2560, height: 1440, StartingPoints: 150, Iterations: 100000},
-		{width: 2560, height: 1440, StartingPoints: 200, Iterations: 100000},
 	}
 
 	for _, tt := range tc {
@@ -46,6 +41,40 @@ func BenchmarkSingleThreadGenerator_Render(b *testing.B) {
 }
 
 func BenchmarkMultiThreadGenerator_Render(b *testing.B) {
+	tc := []struct {
+		width          int
+		height         int
+		StartingPoints int
+		Iterations     int
+		NumWorkers     int
+	}{
+		{width: 1980, height: 1080, StartingPoints: 100, Iterations: 100000, NumWorkers: 8},
+		{width: 1980, height: 1080, StartingPoints: 100, Iterations: 100000, NumWorkers: 12},
+		{width: 1980, height: 1080, StartingPoints: 100, Iterations: 100000, NumWorkers: 16},
+		{width: 1980, height: 1080, StartingPoints: 100, Iterations: 100000, NumWorkers: 20},
+		{width: 1980, height: 1080, StartingPoints: 100, Iterations: 100000, NumWorkers: 24},
+	}
+
+	for _, tt := range tc {
+		b.Run(fmt.Sprintf("width: %d, height: %d, Starting points %d, numWorkers %d", tt.width, tt.height,
+			tt.StartingPoints, tt.NumWorkers), func(b *testing.B) {
+			img := domain.NewImageMatrix(tt.width, tt.height, tt.StartingPoints, tt.Iterations)
+			gn := &generator.MultiThreadGenerator{NumWorkers: tt.NumWorkers}
+
+			img.GenerateAffineTransformations()
+			img.NonLinearTransformations = append(img.NonLinearTransformations, transformations.Disc,
+				transformations.Linear, transformations.Polar)
+
+			b.ResetTimer()
+
+			for i := 0; i < b.N; i++ {
+				gn.Render(img)
+			}
+		})
+	}
+}
+
+func BenchmarkMultiThreadGenerator_Render8(b *testing.B) {
 	tc := []struct {
 		width          int
 		height         int
