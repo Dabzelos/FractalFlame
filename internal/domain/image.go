@@ -7,7 +7,7 @@ import (
 	"math/rand/v2"
 	"sync"
 
-	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/pkg/random"
+	"FractalFlame/pkg/random"
 )
 
 type AffineTransformation struct {

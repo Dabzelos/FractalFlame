@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain/errors"
+	"FractalFlame/internal/domain/errors"
 )
 
 type LinearTransformationsConfig struct {

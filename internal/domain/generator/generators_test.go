@@ -5,9 +5,9 @@ import (
 
 	"testing"
 
-	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain"
-	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain/generator"
-	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain/transformations"
+	"FractalFlame/internal/domain"
+	"FractalFlame/internal/domain/generator"
+	"FractalFlame/internal/domain/transformations"
 )
 
 func BenchmarkSingleThreadGenerator_Render(b *testing.B) {
