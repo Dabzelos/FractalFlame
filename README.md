@@ -122,10 +122,10 @@
 | 2560x1440         | 200             | 397,396,392         |
 
 ## Примеры изображений:
-![alt-text] (images/FractalFlame.png)
-![alt-text] (images/photo_2024-12-07_03-37-02.jpg)
-![alt-text] (images/photo_2024-12-07_03-42-18.jpg)
-![alt-text] (images/photo_2024-12-07_12-18-14.jpg)
-![alt-text] (images/photo_2024-12-07_19-44-46.jpg)
-![alt-text] (images/photo_2024-12-08_23-29-09.jpg)
+![alt-text](images/FractalFlame.png)
+![alt-text](images/photo_2024-12-07_03-37-02.jpg)
+![alt-text](images/photo_2024-12-07_03-42-18.jpg)
+![alt-text](images/photo_2024-12-07_12-18-14.jpg)
+![alt-text](images/photo_2024-12-07_19-44-46.jpg)
+![alt-text](images/photo_2024-12-08_23-29-09.jpg)
 
