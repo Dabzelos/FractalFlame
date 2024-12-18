@@ -4,9 +4,9 @@ import (
 	"flag"
 	"os"
 
-	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/application"
-	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/infrastructure/io"
-	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/pkg/logger"
+	"FractalFlame/internal/application"
+	"FractalFlame/internal/infrastructure/io"
+	"FractalFlame/pkg/logger"
 )
 
 func main() {

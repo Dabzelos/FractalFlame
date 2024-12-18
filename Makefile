@@ -11,5 +11,5 @@ build:
 ## test: FractalFlame all tests
 .PHONY: test
 test:
-	@go test -coverpkg='github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/...' --race -count=1 -coverprofile='$(COVERAGE_FILE)' ./...
+	@go test -coverpkg='FractalFlame/...' --race -count=1 -coverprofile='$(COVERAGE_FILE)' ./...
 	@go tool cover -func='$(COVERAGE_FILE)' | grep ^total | tr -s '\t'

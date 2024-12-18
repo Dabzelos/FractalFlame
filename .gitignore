@@ -12,9 +12,6 @@ bin
 logs.txt
 .idea
 
-*.png
-*.jpg
-*.jpeg
 # Test binary, built with `go test -c`
 *.test
 

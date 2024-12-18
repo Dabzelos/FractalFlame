@@ -5,13 +5,13 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/configuration"
-	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain"
-	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain/errors"
-	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain/generator"
-	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain/savers"
-	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain/transformations"
-	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/infrastructure/io"
+	"FractalFlame/configuration"
+	"FractalFlame/internal/domain"
+	"FractalFlame/internal/domain/errors"
+	"FractalFlame/internal/domain/generator"
+	"FractalFlame/internal/domain/savers"
+	"FractalFlame/internal/domain/transformations"
+	"FractalFlame/internal/infrastructure/io"
 )
 
 type fractalBuilder interface {

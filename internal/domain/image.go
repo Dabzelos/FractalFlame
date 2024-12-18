@@ -7,7 +7,7 @@ import (
 	"math/rand/v2"
 	"sync"
 
-	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/pkg/random"
+	"FractalFlame/pkg/random"
 )
 
 type AffineTransformation struct {
@@ -52,7 +52,7 @@ func NewImageMatrix(width, height, startingPoints, iterations int) *ImageMatrix 
 		Height: height,
 	}
 
-	NonlinearTransformations := make([]TransformFunc, 0)
+	NonlinearTransformations := make([]TransformFunc, 0, 10)
 
 	matrix := make([][]Pixel, resolution.Height)
 	for y := 0; y < resolution.Height; y++ {

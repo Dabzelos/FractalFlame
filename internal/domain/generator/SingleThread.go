@@ -1,7 +1,7 @@
 package generator
 
 import (
-	"github.com/central-university-dev/backend_academy_2024_project_4-go-Dabzelos/internal/domain"
+	"FractalFlame/internal/domain"
 )
 
 type SingleThreadGenerator struct{}
